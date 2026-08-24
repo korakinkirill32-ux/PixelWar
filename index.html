@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <!-- Yandex.RTB -->
+  <script>window.yaContextCb=window.yaContextCb||[]</script>
+  <script src="https://yandex.ru/ads/system/context.js" async></script>
+  
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+  <title>PixelsWar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f7;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 15px;
+    }
+    #app {
+      max-width: 1400px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    h1 {
+      font-size: 28px;
+      color: #e94560;
+      font-weight: 800;
+    }
+    #top-stats {
+      display: flex;
+      gap: 20px;
+      font-size: 15px;
+      color: #555;
+      background: #fff;
+      padding: 6px 18px;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    #top-stats span { font-weight: 700; color: #e94560; }
+
+    /* ===== ОСНОВНОЙ БЛОК ===== */
+    #main-area {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    /* ===== ЛЕВАЯ ПАНЕЛЬ (реклама) ===== */
+    #left-panel {
+      width: 250px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #left-panel .ad-label {
+      font-size: 10px;
+      color: #bbb;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #left-panel .ad-block {
+      background: #f8f8fa;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: #aaa;
+      border: 1px dashed #ddd;
+      overflow: hidden;
+      min-height: 350px;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* ===== КАНВАС ===== */
+    #canvas-wrapper {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      touch-action: none;
+      cursor: grab;
+      border: 1px solid #e8e8ed;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      aspect-ratio: 1 / 1;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+    #canvas-wrapper:active { cursor: grabbing; }
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      touch-action: none;
+      background: #ffffff;
+    }
+    #zoom-info {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.65);
+      padding: 3px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #ccc;
+      pointer-events: none;
+      user-select: none;
+      backdrop-filter: blur(4px);
+    }
+    #coords {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.65);
+      padding: 3px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #ccc;
+      pointer-events: none;
+      user-select: none;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ===== ПРАВАЯ ПАНЕЛЬ ===== */
+    #side-panel {
+      width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Статус */
+    #status-block {
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid #e8e8ed;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      text-align: center;
+    }
+    #status {
+      font-size: 13px;
+      color: #555;
+      font-weight: 500;
+    }
+    #cooldown-timer {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e94560;
+      margin-top: 2px;
+    }
+
+    /* Баланс */
+    #balance-block {
+      background: linear-gradient(135deg, #e94560, #c73652);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(233, 69, 96, 0.25);
+    }
+    #balance-block .label { font-size: 11px; opacity: 0.85; }
+    #balance-block .value { font-size: 26px; font-weight: 800; }
+
+    /* Цвета */
+    #color-block {
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #e8e8ed;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    #color-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: 0.15s;
+      flex-shrink: 0;
+    }
+    .color-swatch:hover { transform: scale(1.12); }
+    .color-swatch.active {
+      border-color: #222;
+      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #222;
+    }
+    #custom-color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+    #custom-color-input {
+      width: 36px;
+      height: 32px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      padding: 2px;
+      cursor: pointer;
+    }
+    #hex-input {
+      width: 80px;
+      padding: 5px 10px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      text-align: center;
+    }
+    #hex-input:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+    #color-preview {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #ddd;
+      flex-shrink: 0;
+    }
+
+    /* Кнопки */
+    #btn-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #btn-block button {
+      padding: 10px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+      width: 100%;
+    }
+    #btn-block button:active { transform: scale(0.96); }
+    #place-btn {
+      background: #e94560;
+      color: #fff;
+      box-shadow: 0 3px 14px rgba(233, 69, 96, 0.25);
+    }
+    #place-btn:hover { background: #c73652; }
+    #place-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #ad-btn {
+      background: #ffd93d;
+      color: #222;
+      box-shadow: 0 3px 14px rgba(255, 217, 61, 0.25);
+    }
+    #ad-btn:hover { background: #f5c92a; }
+    #ad-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* ===== МОДАЛКА ===== */
+    #ad-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(6px);
+    }
+    #ad-modal.active { display: flex; }
+    #ad-modal-content {
+      background: #fff;
+      border-radius: 24px;
+      padding: 30px 40px;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+      animation: modalPop 0.3s ease;
+    }
+    @keyframes modalPop {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    #ad-modal-content h2 {
+      color: #e94560;
+      margin-bottom: 8px;
+      font-size: 22px;
+    }
+    #ad-modal-content p {
+      color: #555;
+      margin-bottom: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    #ad-modal-content .reward-big {
+      font-size: 28px;
+      font-weight: 800;
+      color: #e94560;
+      background: #fef0f3;
+      padding: 6px 16px;
+      border-radius: 12px;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    #ad-timer {
+      font-size: 44px;
+      font-weight: 800;
+      color: #e94560;
+      margin: 10px 0;
+    }
+    #ad-close-btn {
+      padding: 12px 40px;
+      background: #ddd;
+      color: #999;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: not-allowed;
+      transition: 0.3s;
+    }
+    #ad-close-btn.active {
+      background: #e94560;
+      color: #fff;
+      cursor: pointer;
+    }
+    #ad-close-btn.active:hover { background: #c73652; }
+
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 1100px) {
+      #left-panel {
+        display: none;
+      }
+      #side-panel {
+        width: 200px;
+      }
+    }
+    @media (max-width: 760px) {
+      #main-area { flex-direction: column; }
+      #side-panel {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      #side-panel > * {
+        flex: 1;
+        min-width: 130px;
+      }
+      #btn-block { flex-direction: row; }
+      #btn-block button { flex: 1; }
+      #top-stats { font-size: 12px; padding: 4px 12px; }
+      h1 { font-size: 20px; }
+      #balance-block .value { font-size: 20px; }
+      #canvas-wrapper { max-width: 100%; }
+    }
+    @media (max-width: 480px) {
+      #side-panel > * { min-width: 100%; }
+      #btn-block { flex-direction: column; }
+      #ad-modal-content { padding: 20px; }
+      #ad-timer { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ===== ВЕРХНЯЯ ПАНЕЛЬ ===== -->
+  <div id="top-bar">
+    <h1>⚔️ PixelsWar</h1>
+    <div id="top-stats">
+      <span>🏆 <span id="totalPixels">0</span></span>
+      <span>💰 <span id="click-balance">0</span></span>
+    </div>
+  </div>
+
+  <!-- ===== ОСНОВНАЯ ОБЛАСТЬ ===== -->
+  <div id="main-area">
+    <!-- ЛЕВАЯ ПАНЕЛЬ (реклама) -->
+    <div id="left-panel">
+      <div class="ad-label">— Реклама —</div>
+      <!-- Yandex.RTB R-A-19804468-1 -->
+      <div class="ad-block" id="yandex_rtb_R-A-19804468-1"></div>
+      <script>
+      window.yaContextCb.push(() => {
+          Ya.Context.AdvManager.render({
+              "blockId": "R-A-19804468-1",
+              "renderTo": "yandex_rtb_R-A-19804468-1"
+          })
+      })
+      </script>
+
+      <div class="ad-label" style="margin-top:4px;">— Реклама —</div>
+      <!-- Yandex.RTB R-A-19804468-3 -->
+      <div class="ad-block" id="yandex_rtb_R-A-19804468-3"></div>
+      <script>
+      window.yaContextCb.push(() => {
+          Ya.Context.AdvManager.render({
+              "blockId": "R-A-19804468-3",
+              "renderTo": "yandex_rtb_R-A-19804468-3"
+          })
+      })
+      </script>
+    </div>
+
+    <!-- КАНВАС -->
+    <div id="canvas-wrapper">
+      <canvas id="canvas" width="600" height="600"></canvas>
+      <div id="zoom-info">🔍 1.0x</div>
+      <div id="coords">x: 0, y: 0</div>
+    </div>
+
+    <!-- ПРАВАЯ ПАНЕЛЬ -->
+    <div id="side-panel">
+      <!-- Статус -->
+      <div id="status-block">
+        <div id="status">✅ Ставьте пиксель</div>
+        <div id="cooldown-timer">✅ Можно смотреть рекламу</div>
+      </div>
+
+      <!-- Баланс -->
+      <div id="balance-block">
+        <div class="label">Доступно кликов</div>
+        <div class="value" id="click-balance-big">0</div>
+      </div>
+
+      <!-- Цвета -->
+      <div id="color-block">
+        <div id="color-palette"></div>
+        <div id="custom-color-row">
+          <input type="color" id="custom-color-input" value="#ff0000">
+          <input type="text" id="hex-input" value="#ff0000" maxlength="7" placeholder="#ff0000">
+          <div id="color-preview" style="background:#ff0000;"></div>
+        </div>
+      </div>
+
+      <!-- Кнопки -->
+      <div id="btn-block">
+        <button id="place-btn">🚀 Поставить</button>
+        <button id="ad-btn">📺 Реклама (+10)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== МОДАЛКА ===== -->
+<div id="ad-modal">
+  <div id="ad-modal-content">
+    <h2>📺 Смотрите рекламу</h2>
+    <p>Посмотрите рекламу, чтобы получить</p>
+    <div class="reward-big">+10 кликов</div>
+    <div id="ad-timer">10</div>
+    <p style="font-size:14px;color:#aaa;margin-bottom:16px;">Подождите 10 секунд</p>
+    <button id="ad-close-btn" disabled>⏳ Подождите...</button>
+  </div>
+</div>
+
+<!-- ===== ВСПЛЫВАЮЩАЯ (FULLSCREEN) РЕКЛАМА ===== -->
+<!-- Yandex.RTB R-A-19804468-2 -->
+<script>
+window.yaContextCb.push(() => {
+    Ya.Context.AdvManager.render({
+        "blockId": "R-A-19804468-2",
+        "type": "fullscreen",
+        "platform": "touch"
+    })
+})
+</script>
+
+<script>
+// ============================================================
+// НАСТРОЙКИ
+// ============================================================
+const COLS = 100;
+const ROWS = 100;
+const CELL_SIZE = 6;
+const CANVAS_SIZE = COLS * CELL_SIZE;
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const AD_COOLDOWN_SECONDS = 10;
+const AD_REWARD = 10;
+const STORAGE_KEY = 'pixel_battle_data';
+const BALANCE_KEY = 'pixel_battle_balance';
+
+// ============================================================
+// ЭЛЕМЕНТЫ
+// ============================================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = CANVAS_SIZE;
+canvas.height = CANVAS_SIZE;
+
+const statusEl = document.getElementById('status');
+const cooldownTimerEl = document.getElementById('cooldown-timer');
+const zoomInfo = document.getElementById('zoom-info');
+const coordsEl = document.getElementById('coords');
+const totalPixelsEl = document.getElementById('totalPixels');
+const balanceEl = document.getElementById('click-balance');
+const balanceBigEl = document.getElementById('click-balance-big');
+const placeBtn = document.getElementById('place-btn');
+const adBtn = document.getElementById('ad-btn');
+
+const adModal = document.getElementById('ad-modal');
+const adTimerEl = document.getElementById('ad-timer');
+const adCloseBtn = document.getElementById('ad-close-btn');
+
+// ============================================================
+// СОСТОЯНИЕ
+// ============================================================
+let pixels = [];
+let balance = 0;
+let panX = 0, panY = 0;
+let zoom = 1;
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
+let panStartX = 0, panStartY = 0;
+
+let selectedColor = '#ff0000';
+
+let isAdOnCooldown = false;
+let adCooldownInterval = null;
+
+let isAdOpen = false;
+let adCountdown = 10;
+let adInterval = null;
+
+// ============================================================
+// ЗАГРУЗКА
+// ============================================================
+function loadData() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      pixels = JSON.parse(data);
+      pixels = pixels.filter(p => p.x < COLS && p.y < ROWS && p.x >= 0 && p.y >= 0);
+    } else {
+      pixels = [];
+    }
+  } catch (e) { pixels = []; }
+  
+  try {
+    const bal = localStorage.getItem(BALANCE_KEY);
+    if (bal) { balance = parseInt(bal) || 0; }
+  } catch (e) { balance = 0; }
+  
+  updateStats();
+  draw();
+  updateAdCooldownDisplay();
+}
+
+function savePixels() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pixels)); } catch (e) {}
+  updateStats();
+}
+
+function saveBalance() {
+  try { localStorage.setItem(BALANCE_KEY, String(balance)); } catch (e) {}
+  updateStats();
+}
+
+// ============================================================
+// ПАЛИТРА
+// ============================================================
+const paletteColors = [
+  '#000000','#434343','#666666','#999999','#b7b7b7','#cccccc','#d9d9d9','#efefef','#f3f3f3','#ffffff',
+  '#980000','#ff0000','#ff9900','#ffff00','#00ff00','#00ffff','#4a86e8','#0000ff','#9900ff','#ff00ff',
+  '#e6b8af','#f4cccc','#fce5cd','#fff2cc','#d9ead3','#d0e0e3','#c9daf8','#cfe2f3','#d9d2e9','#ead1dc',
+  '#dd7e6b','#ea9999','#f9cb9c','#ffe599','#b6d7a8','#a2c4c9','#a4c2f4','#9fc5e8','#b4a7d6','#d5a6bd',
+  '#cc4125','#e06666','#f6b26b','#ffd966','#93c47d','#76a5af','#6d9eeb','#6fa8dc','#8e7cc3','#c27ba0',
+  '#a61c00','#cc0000','#e69138','#f1c232','#6aa84f','#45818e','#3c78d8','#3d85c6','#674ea7','#a64d79',
+  '#85200c','#990000','#b45f06','#bf9000','#38761d','#134f5c','#1155cc','#0b5394','#351c75','#741b47'
+];
+
+function buildPalette() {
+  const container = document.getElementById('color-palette');
+  container.innerHTML = '';
+  paletteColors.forEach(color => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch';
+    swatch.style.background = color;
+    swatch.dataset.color = color;
+    if (color === selectedColor) swatch.classList.add('active');
+    swatch.addEventListener('click', () => selectColor(color));
+    container.appendChild(swatch);
+  });
+}
+
+function selectColor(color) {
+  selectedColor = color;
+  document.querySelectorAll('.color-swatch').forEach(el => {
+    el.classList.toggle('active', el.dataset.color === color);
+  });
+  document.getElementById('custom-color-input').value = color;
+  document.getElementById('hex-input').value = color;
+  document.getElementById('color-preview').style.background = color;
+}
+
+// ============================================================
+// ОТРИСОВКА
+// ============================================================
+function draw() {
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  const center = CANVAS_SIZE / 2;
+  ctx.translate(center + panX, center + panY);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-center, -center);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= COLS; i++) {
+    const pos = i * CELL_SIZE;
+    ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, CANVAS_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(CANVAS_SIZE, pos); ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(COLS / 2 * CELL_SIZE, 0); ctx.lineTo(COLS / 2 * CELL_SIZE, CANVAS_SIZE); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, ROWS / 2 * CELL_SIZE); ctx.lineTo(CANVAS_SIZE, ROWS / 2 * CELL_SIZE); ctx.stroke();
+  ctx.setLineDash([]);
+
+  for (let p of pixels) {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x * CELL_SIZE, p.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+  }
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.restore();
+
+  zoomInfo.textContent = `🔍 ${zoom.toFixed(1)}x`;
+}
+
+function updateStats() {
+  totalPixelsEl.textContent = pixels.length;
+  balanceEl.textContent = balance;
+  balanceBigEl.textContent = balance;
+}
+
+// ============================================================
+// КУЛДАУН НА РЕКЛАМУ
+// ============================================================
+function startAdCooldown() {
+  if (isAdOnCooldown) return;
+  
+  isAdOnCooldown = true;
+  adBtn.disabled = true;
+  let seconds = AD_COOLDOWN_SECONDS;
+  
+  cooldownTimerEl.textContent = `⏳ Реклама через ${seconds}с`;
+  statusEl.textContent = `⏳ Подождите ${seconds}с для новой рекламы`;
+  
+  adCooldownInterval = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(adCooldownInterval);
+      adCooldownInterval = null;
+      isAdOnCooldown = false;
+      adBtn.disabled = false;
+      cooldownTimerEl.textContent = '✅ Можно смотреть рекламу';
+      statusEl.textContent = '✅ Нажмите "Реклама" для +10 кликов';
+    } else {
+      cooldownTimerEl.textContent = `⏳ Реклама через ${seconds}с`;
+      statusEl.textContent = `⏳ Подождите ${seconds}с для новой рекламы`;
+    }
+  }, 1000);
+}
+
+function updateAdCooldownDisplay() {
+  if (!isAdOnCooldown) {
+    cooldownTimerEl.textContent = '✅ Можно смотреть рекламу';
+  }
+}
+
+// ============================================================
+// КООРДИНАТЫ КЛИКА
+// ============================================================
+function getWorldCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const relX = (clientX - rect.left) / rect.width;
+  const relY = (clientY - rect.top) / rect.height;
+  const canvasX = relX * CANVAS_SIZE;
+  const canvasY = relY * CANVAS_SIZE;
+  const center = CANVAS_SIZE / 2;
+  const worldX = (canvasX - center - panX) / zoom + center;
+  const worldY = (canvasY - center - panY) / zoom + center;
+  const col = Math.floor(worldX / CELL_SIZE);
+  const row = Math.floor(worldY / CELL_SIZE);
+  return { x: Math.max(0, Math.min(COLS - 1, col)), y: Math.max(0, Math.min(ROWS - 1, row)) };
+}
+
+// ============================================================
+// ПОСТАВИТЬ ПИКСЕЛЬ
+// ============================================================
+function placePixel(col, row) {
+  if (balance <= 0) {
+    statusEl.textContent = '❌ Нет кликов! Смотрите рекламу.';
+    return false;
+  }
+  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) {
+    statusEl.textContent = '❌ За пределами';
+    return false;
+  }
+
+  const color = selectedColor;
+  pixels = pixels.filter(p => !(p.x === col && p.y === row));
+  pixels.push({ x: col, y: row, color });
+  balance--;
+  savePixels();
+  saveBalance();
+  draw();
+  statusEl.textContent = `✅ Пиксель (${col}, ${row}) поставлен! Осталось: ${balance}`;
+  updateStats();
+  return true;
+}
+
+// ============================================================
+// КНОПКА "ПОСТАВИТЬ"
+// ============================================================
+placeBtn.addEventListener('click', () => {
+  const center = CANVAS_SIZE / 2;
+  const col = Math.floor(((center - panX) / zoom + panX - center) / CELL_SIZE);
+  const row = Math.floor(((center - panY) / zoom + panY - center) / CELL_SIZE);
+  placePixel(Math.max(0, Math.min(COLS - 1, col)), Math.max(0, Math.min(ROWS - 1, row)));
+});
+
+// ============================================================
+// РЕКЛАМА (10 кликов)
+// ============================================================
+adBtn.addEventListener('click', () => {
+  if (isAdOpen) return;
+  if (isAdOnCooldown) {
+    statusEl.textContent = '⏳ Подождите окончания кулдауна!';
+    return;
+  }
+  openAdModal();
+});
+
+function openAdModal() {
+  isAdOpen = true;
+  adBtn.disabled = true;
+  adModal.classList.add('active');
+  
+  adCountdown = 10;
+  adTimerEl.textContent = adCountdown;
+  adCloseBtn.disabled = true;
+  adCloseBtn.className = '';
+  adCloseBtn.textContent = `⏳ Подождите ${adCountdown}с...`;
+  
+  adInterval = setInterval(() => {
+    adCountdown--;
+    adTimerEl.textContent = adCountdown;
+    adCloseBtn.textContent = `⏳ Подождите ${adCountdown}с...`;
+    
+    if (adCountdown <= 0) {
+      clearInterval(adInterval);
+      adInterval = null;
+      adCloseBtn.disabled = false;
+      adCloseBtn.className = 'active';
+      adCloseBtn.textContent = '✅ Получить 10 кликов!';
+    }
+  }, 1000);
+}
+
+function closeAdModal(giveReward) {
+  if (adInterval) { clearInterval(adInterval); adInterval = null; }
+  
+  adModal.classList.remove('active');
+  isAdOpen = false;
+  adBtn.disabled = false;
+  
+  if (giveReward) {
+    balance += AD_REWARD;
+    saveBalance();
+    updateStats();
+    statusEl.textContent = `✅ +10 кликов! Баланс: ${balance}`;
+    startAdCooldown();
+  } else {
+    statusEl.textContent = '❌ Реклама не засчитана';
+  }
+}
+
+adCloseBtn.addEventListener('click', () => {
+  if (adCloseBtn.disabled) return;
+  if (adCountdown <= 0) closeAdModal(true);
+});
+
+adModal.addEventListener('click', (e) => {
+  if (e.target === adModal && adCountdown <= 0) closeAdModal(true);
+});
+
+// ============================================================
+// УПРАВЛЕНИЕ КАМЕРОЙ
+// ============================================================
+function clampPan() {
+  if (zoom <= 1) { panX = 0; panY = 0; return; }
+  const maxPan = (CANVAS_SIZE * (zoom - 1)) / 2;
+  panX = Math.max(-maxPan, Math.min(maxPan, panX));
+  panY = Math.max(-maxPan, Math.min(maxPan, panY));
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  panStartX = panX;
+  panStartY = panY;
+  canvas.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  panX = panStartX + (e.clientX - dragStartX) / rect.width * CANVAS_SIZE;
+  panY = panStartY + (e.clientY - dragStartY) / rect.height * CANVAS_SIZE;
+  clampPan();
+  draw();
+});
+
+window.addEventListener('mouseup', () => {
+  if (isDragging) { isDragging = false; canvas.style.cursor = 'grab'; }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  let newZoom = zoom * delta;
+  if (newZoom < ZOOM_MIN) newZoom = ZOOM_MIN;
+  if (newZoom > ZOOM_MAX) newZoom = ZOOM_MAX;
+  zoom = newZoom;
+  clampPan();
+  draw();
+}, { passive: false });
+
+canvas.addEventListener('click', (e) => {
+  if (isDragging) return;
+  const { x, y } = getWorldCoords(e.clientX, e.clientY);
+  coordsEl.textContent = `x: ${x}, y: ${y}`;
+  placePixel(x, y);
+});
+
+// ============================================================
+// ТЕЛЕФОН
+// ============================================================
+let touchStartX = 0, touchStartY = 0, touchPanStartX = 0, touchPanStartY = 0;
+let touchDist = 0, touchZoom = 1, isTouchDragging = false;
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    isTouchDragging = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchPanStartX = panX;
+    touchPanStartY = panY;
+  } else if (e.touches.length === 2) {
+    touchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    touchZoom = zoom;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches.length === 1 && isTouchDragging) {
+    panX = touchPanStartX + (e.touches[0].clientX - touchStartX) / rect.width * CANVAS_SIZE;
+    panY = touchPanStartY + (e.touches[0].clientY - touchStartY) / rect.height * CANVAS_SIZE;
+    clampPan();
+    draw();
+  } else if (e.touches.length === 2) {
+    const newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const delta = newDist / touchDist;
+    let newZoom = touchZoom * delta;
+    if (newZoom < ZOOM_MIN) newZoom = ZOOM_MIN;
+    if (newZoom > ZOOM_MAX) newZoom = ZOOM_MAX;
+    zoom = newZoom;
+    clampPan();
+    draw();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (e.touches.length === 0) {
+    isTouchDragging = false;
+    if (touchStartX && e.changedTouches.length > 0) {
+      const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+      if (dx < 10 && dy < 10) {
+        const { x, y } = getWorldCoords(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        coordsEl.textContent = `x: ${x}, y: ${y}`;
+        placePixel(x, y);
+      }
+    }
+  }
+}, { passive: false });
+
+// ============================================================
+// ЦВЕТ (инпуты)
+// ============================================================
+const customColorInput = document.getElementById('custom-color-input');
+const hexInput = document.getElementById('hex-input');
+const colorPreview = document.getElementById('color-preview');
+
+customColorInput.addEventListener('input', (e) => {
+  const color = e.target.value;
+  hexInput.value = color;
+  colorPreview.style.background = color;
+  selectColor(color);
+});
+
+hexInput.addEventListener('input', (e) => {
+  let value = e.target.value.trim();
+  if (value && !value.startsWith('#')) value = '#' + value;
+  if (/^#[0-9a-f]{6}$/i.test(value)) {
+    selectColor(value);
+    customColorInput.value = value;
+    colorPreview.style.background = value;
+  }
+});
+
+hexInput.addEventListener('blur', () => {
+  if (!/^#[0-9a-f]{6}$/i.test(hexInput.value.trim())) {
+    hexInput.value = selectedColor;
+  }
+});
+
+// ============================================================
+// СТАРТ
+// ============================================================
+buildPalette();
+selectColor('#ff0000');
+loadData();
+
+console.log('⚔️ PixelsWar 100×100');
+console.log('🔄 Кулдаун 10 секунд ТОЛЬКО на рекламу');
+console.log('💰 Клики можно ставить без ограничений (пока есть баланс)');
+console.log('📺 За рекламу даётся 10 кликов!');
+console.log('📱 Всплывающая fullscreen-реклама активирована!');
+console.log('📢 Два баннера слева от канваса (увеличены в 2.5x)!');
+</script>
+
+</body>
+</html>
